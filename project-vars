@@ -1,0 +1,4 @@
+version: 1.0.0
+location: ./
+linux_name: node
+user_home_dir: /home/{{linux_name}}
