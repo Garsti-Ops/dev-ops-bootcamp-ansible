@@ -1,0 +1,59 @@
+---
+- name: Install python3, docker and docker-compose
+  hosts: docker_server
+  become: yes
+  tasks:
+    - name: Install python3 and docker
+      vars:
+        ansible_python_interpreter: /usr/bin/python
+      yum:
+        name:
+          - python3
+          - docker
+        update_cache: yes
+        state: present
+    - name: Install Docker-Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-linux-{{lookup('pipe', 'uname -m')}}
+        dest: /usr/local/bin/docker-compose
+        mode: +x
+    - name: Start docker daemon
+      systemd:
+        name: docker
+        state: started
+    - name: Install docker python module
+      pip:
+        name:
+          - docker
+          - docker-compose
+
+- name: Add ec2-user to docker group
+  hosts: docker_server
+  become: yes
+  tasks:
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+    - name: Reconnect to server session
+      meta: reset_connection
+
+- name: Start docker container
+  hosts: docker_server
+  vars_prompt:
+    - name: docker_password
+      prompt: Enter password for docker registry
+  tasks:
+    - name: Copy Docker Compose
+      copy:
+        src: ./docker-compose.yml
+        dest: /home/ec2-user/docker-compose.yml
+    - name: Docker login
+      docker_login:
+        registry_url: https://index.docker.io/v1/
+        username: garstiops
+        password: "{{docker_password}}"
+    - name: Start containers from compose
+      docker_compose:
+        project_src: /home/ec2-user
