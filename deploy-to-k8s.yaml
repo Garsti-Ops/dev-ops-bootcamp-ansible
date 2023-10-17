@@ -1,0 +1,17 @@
+---
+- name: Deploy app in new namespace
+  hosts: localhost
+  tasks:
+    - name: Create k8s namespace
+      k8s:
+        name: my-app
+        api_version: v1
+        kind: Namespace
+        state: present
+        kubeconfig: /home/cheider/.kube/config
+    - name: Deploy nginx app
+      k8s:
+        src: /home/cheider/workspace/devops-bootcamp/kubernetes/nginx-deployment.yaml
+        state: present
+        kubeconfig: /home/cheider/.kube/config
+        namespace: my-app
