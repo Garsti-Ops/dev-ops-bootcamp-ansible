@@ -1,4 +1,4 @@
 - name: Create new linux user
   user:
     name: docker-user
-    groups: adm,docker
+    groups: "{{ user_groups }}"
