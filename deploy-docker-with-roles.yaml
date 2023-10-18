@@ -1,0 +1,60 @@
+---
+- name: Wait for ssh connection
+  hosts: all
+  gather_facts: False
+  tasks:
+    - name: Ensure ssh port open
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        search_reges: OpenSSH
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: /usr/bin/python
+
+
+- name: Install python3, docker and docker-compose
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install python3 and docker
+      vars:
+        ansible_python_interpreter: /usr/bin/python
+      yum:
+        name:
+          - python3
+          - docker
+        update_cache: yes
+        state: present
+    - name: Install Docker-Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-linux-{{lookup('pipe', 'uname -m')}}
+        dest: /usr/local/bin/docker-compose
+        mode: +x
+    - name: Start docker daemon
+      systemd:
+        name: docker
+        state: started
+    - name: Install docker python module
+      pip:
+        name:
+          - docker
+          - docker-compose
+
+- name: Create new Linux User
+  hosts: all
+  become: yes
+  roles:
+    - create_user
+
+- name: Start docker container
+  hosts: all
+  become: yes
+  become_user: docker-user
+  vars_prompt:
+    - name: docker_password
+      prompt: Enter password for docker registry
+  roles:
+    - start_containers
